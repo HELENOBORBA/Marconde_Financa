@@ -1,26 +1,47 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-import { defaultCategories } from '@/data/categories'
+import { useMemo } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { defaultCategories as categories } from '@/data/categories'
+import { useTransactions } from '../../hooks/useTransactions';
+import { aggregateByCategory } from '../../modules/analytics/transactionsAnalytics';
 
-interface Props { byCategory: Record<string, number> }
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF1919'];
 
-export function CategoryChart({ byCategory }: Props) {
-  const data = Object.entries(byCategory).map(([catId, value]) => {
-    const cat = defaultCategories.find(c => c.id === catId)
-    return { name: cat?.name || 'Outros', value, color: cat?.color || '#6b7280' }
-  }).sort((a, b) => b.value - a.value)
+// Helper to create a map from the category list for the analytics function
+const categoryMap = categories.reduce((acc, cat) => {
+  acc[cat.id] = cat.name;
+  return acc;
+}, {} as Record<string, string>);
+
+export function CategoryChart() {
+  const { transactions } = useTransactions();
+
+  const chartData = useMemo(() => {
+    // Use the extracted analytics function
+    return aggregateByCategory(transactions, categoryMap);
+  }, [transactions]);
 
   return (
-    <div className="card">
-      <h3 className="text-lg font-semibold mb-4">Despesas por Categoria</h3>
+    <div className="bg-white p-6 rounded-lg shadow">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribuição de Despesas</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60} paddingAngle={2}>
-            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+            nameKey="name"
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
           </Pie>
-          <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString('pt-BR')}`} />
-          <Legend />
+          <Tooltip formatter={(value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value as number)} />
         </PieChart>
       </ResponsiveContainer>
     </div>
-  )
+  );
 }
