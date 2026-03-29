@@ -1,0 +1,9 @@
+{
+  "system_type": "financial-management",
+  "complexity_level": "medium",
+  "architecture": {
+    "frontend": "React + TypeScript + Tailwind CSS",
+    "backend": "Supabase Edge Functions",
+    "database": "Supabase PostgreSQL"
+  }
+}
