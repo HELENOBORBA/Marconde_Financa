@@ -1,6 +1,7 @@
 import { format, parseISO, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Transaction } from '../../types';
+import { toCents, fromCents } from '../financial/utils';
 
 export interface MonthlyCashFlow {
   month: string;
@@ -57,7 +58,7 @@ export const aggregateByCategory = (transactions: Transaction[], categories: Rec
   const categoryData = transactions
     .filter(t => t.type === 'expense')
     .reduce<Record<string, number>>((acc, transaction) => {
-      const categoryName = transaction.category ? categories[transaction.category] || 'Outros' : 'Outros';
+      const categoryName = transaction.categoryId ? categories[transaction.categoryId] || 'Outros' : 'Outros';
       
       if (!acc[categoryName]) {
         acc[categoryName] = 0;
@@ -71,4 +72,29 @@ export const aggregateByCategory = (transactions: Transaction[], categories: Rec
     name,
     value,
   }));
+};
+
+/**
+ * Calculates the total amount for a specific type of transaction (income or expense)
+ * using integer-based math to prevent floating-point errors.
+ */
+export const calculateTotal = (transactions: Transaction[], type: 'income' | 'expense'): number => {
+  const totalInCents = transactions
+    .filter(t => t.type === type)
+    .reduce((sum, transaction) => sum + toCents(transaction.amount), 0);
+
+  return fromCents(totalInCents);
+};
+
+/**
+ * Calculates the net balance from a list of transactions.
+ * Uses integer-based math for precision.
+ */
+export const calculateBalance = (transactions: Transaction[]): number => {
+  const balanceInCents = transactions.reduce((balance, transaction) => {
+    const amountInCents = toCents(transaction.amount);
+    return transaction.type === 'income' ? balance + amountInCents : balance - amountInCents;
+  }, 0);
+
+  return fromCents(balanceInCents);
 };
